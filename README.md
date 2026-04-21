@@ -1,30 +1,48 @@
-# Gilded Rose starting position in Java
+# Gilded Rose Kata — Java Refactoring
 
-## Run the TextTest Fixture from Command-Line
+## The Challenge
+Refactor legacy spaghetti code (deeply nested if-else) into a clean,
+extensible design — without breaking existing behaviour.
 
+## Design Decision — Strategy Map Pattern
+
+Adding a new item type in the original code required **6 changes** across
+multiple methods. One missed change = a silent bug.
+
+The solution: a **strategy registry map** where each item's full behaviour
+lives in one line.
+
+```java
+private static final Map<String, ItemUpdater> UPDATERS = Map.of(
+    "Aged Brie",          (item, expired) -> adjustQuality(item, expired ? +2 : +1),
+    "Backstage passes…",  GildedRose::updateBackstage,
+    "Conjured Mana Cake", (item, expired) -> adjustQuality(item, expired ? -4 : -2)
+);
 ```
-./gradlew -q text
+
+**Adding a new item now = 1 line. Nothing else changes.**
+
+## Key Design Choices
+
+| Decision                              | Reason                                                                 |
+|---------------------------------------|------------------------------------------------------------------------|
+| `@FunctionalInterface ItemUpdater`    | Domain-specific name, primitive `boolean`, compile-time contract       |
+| `LEGENDARY` Set + early return        | Legendary items skip `sellIn--` too — not just a no-op update          |
+| `NORMAL` as fallback                  | Unknown item names treated as normal — can't enumerate all names       |
+| `adjustQuality()` centralised         | Quality bounds `[0, 50]` enforced structurally — impossible to violate |
+| `MIN_QUALITY / MAX_QUALITY` constants | Requirements explicitly state these limits — named for traceability    |
+
+## Principles Demonstrated
+- **Open/Closed** — open for extension, closed for modification
+- **Single Responsibility** — each method does exactly one thing
+- **DRY** — quality clamping and expired check each live in one place
+
+## Run Tests
+```bash
+./gradlew test
 ```
 
-### Specify Number of Days
-
-For e.g. 10 days:
-
+## Run Approval Test (30 days)
+```bash
+./gradlew -q text --args 30
 ```
-./gradlew -q text --args 10
-```
-
-You should make sure the gradle commands shown above work when you execute them in a terminal before trying to use TextTest (see below).
-
-
-## Run the TextTest approval test that comes with this project
-
-There are instructions in the [TextTest Readme](../texttests/README.md) for setting up TextTest. What's unusual for the Java version is there are two executables listed in [config.gr](../texttests/config.gr) for Java. The first uses Gradle wrapped in a python script. Uncomment these lines to use it:
-
-    executable:${TEXTTEST_HOME}/Java/texttest_rig.py
-    interpreter:python
-
-The other relies on your CLASSPATH being set correctly in [environment.gr](../texttests/environment.gr). Uncomment these lines to use it instead:
-
-    executable:com.gildedrose.TexttestFixture
-    interpreter:java
