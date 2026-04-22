@@ -1,48 +1,56 @@
-# Gilded Rose Kata — Java Refactoring
+# Gilded Rose — Refactored (Java)
 
-## The Challenge
-Refactor legacy spaghetti code (deeply nested if-else) into a clean,
-extensible design — without breaking existing behaviour.
+A clean, SRP-compliant refactor of the classic **Gilded Rose Kata**. The original
+tangled `updateQuality()` method has been replaced with a **Strategy + Factory**
+design where every item type owns its own update logic.
 
-## Design Decision — Strategy Map Pattern
+---
 
-Adding a new item type in the original code required **6 changes** across
-multiple methods. One missed change = a silent bug.
+## Solution Highlights
 
-The solution: a **strategy registry map** where each item's full behaviour
-lives in one line.
+- **Single Responsibility Principle** — each class has one reason to change.
+- **Open/Closed Principle** — add a new item type with one new class + one line
+  in the factory; no existing code is modified.
+- **Strategy Pattern** — `ItemUpdater` defines the update contract.
+- **Factory Pattern** — `ItemUpdaterFactory` resolves item name → updater.
+- **Template Method** — shared `adjustQuality()` lives in the abstract base.
+- **Quality clamped** to `[0, 50]` for all non-legendary items.
 
-```java
-private static final Map<String, ItemUpdater> UPDATERS = Map.of(
-    "Aged Brie",          (item, expired) -> adjustQuality(item, expired ? +2 : +1),
-    "Backstage passes…",  GildedRose::updateBackstage,
-    "Conjured Mana Cake", (item, expired) -> adjustQuality(item, expired ? -4 : -2)
-);
+---
+
+## Architecture
+
+```
+GildedRose (orchestrator)
+    │  decrement sellIn (except Sulfuras)
+    └── ItemUpdaterFactory.resolve(name) ──► ItemUpdater (abstract base)
+                                                   ▲
+         ┌──────────────┬──────────────┬───────────┴──────┬──────────────┐
+   NormalUpdater  AgedBrieUpdater  BackstageUpdater  SulfurasUpdater  ConjuredUpdater
 ```
 
-**Adding a new item now = 1 line. Nothing else changes.**
+## Run the Tests
 
-## Key Design Choices
-
-| Decision                              | Reason                                                                 |
-|---------------------------------------|------------------------------------------------------------------------|
-| `@FunctionalInterface ItemUpdater`    | Domain-specific name, primitive `boolean`, compile-time contract       |
-| `LEGENDARY` Set + early return        | Legendary items skip `sellIn--` too — not just a no-op update          |
-| `NORMAL` as fallback                  | Unknown item names treated as normal — can't enumerate all names       |
-| `adjustQuality()` centralised         | Quality bounds `[0, 50]` enforced structurally — impossible to violate |
-| `MIN_QUALITY / MAX_QUALITY` constants | Requirements explicitly state these limits — named for traceability    |
-
-## Principles Demonstrated
-- **Open/Closed** — open for extension, closed for modification
-- **Single Responsibility** — each method does exactly one thing
-- **DRY** — quality clamping and expired check each live in one place
-
-## Run Tests
 ```bash
-./gradlew test
+./gradlew -q test
 ```
 
-## Run Approval Test (30 days)
-```bash
+## Run the TextTest Fixture from Command-Line
+
+```
+./gradlew -q text
+```
+
+### Specify Number of Days
+
+For e.g. 10 days:
+
+```
+./gradlew -q text --args 10
+```
+
+To reproduce the approval run used for submission (30 days):
+
+```
 ./gradlew -q text --args 30
 ```
